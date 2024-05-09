@@ -45,13 +45,14 @@ def register_user(request):
             last_name = data.get('last_name').strip()
             email = data.get('email').strip()
             matric_number = data.get('matric_number').strip()
+            phone_number = data.get('phone_number').strip()
             bio = data.get('bio').strip()
             password = data.get('password').strip()
             if User.objects.filter(**{"username": username, "email": email}).exists():
                 return JsonResponse({'error': "User already exists"}, status=400)
             else:
                 user = User.objects.create_user(username=username, password=password, email=email)
-                Student.object.create(user=user, first_name=first_name, last_name=last_name, email=email, matric_number=matric_number, bio=bio)
+                Student.object.create(user=user, first_name=first_name, last_name=last_name, email=email, matric_number=matric_number, phone_number=phone_number, bio=bio)
                 return JsonResponse({'success': "Registration successful"}, status=200)
         except Exception as e:
             return JsonResponse({'error': f'Internal server error: {str(e)}'}, status=500)

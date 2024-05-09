@@ -10,7 +10,7 @@ class StudentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Student
-        fields = ('user_username', 'first_name', 'last_name', 'email', 'matric_number', 'bio')
+        fields = ('user_username', 'first_name', 'last_name', 'email', 'matric_number', 'phone_number', 'bio')
 
 
 # Serializer for the Category model
