@@ -14,7 +14,7 @@ class CategoryAdmin(admin.ModelAdmin):
 # Register the Product model in the admin panel
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ['seller', 'title', 'price', 'category', 'image']  # Display these fields in the product list
+    list_display = ['seller', 'title', 'price', 'available_quantity', 'category', 'image']  # Display these fields in the product list
     readonly_fields = ['image']  # Make the image field read-only in the admin panel (security measure)
 
 # Register the Transaction model in the admin panel
