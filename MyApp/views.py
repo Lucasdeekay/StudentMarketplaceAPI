@@ -153,20 +153,8 @@ class StudentProductCreateAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class StudentProductDetailAPIView(APIView):
+class StudentProductDeleteAPIView(APIView):
     permission_classes = [IsAuthenticated]  # Only allow authenticated users
-
-    def get(self, request, product_id):
-        try:
-            product = Product.objects.get(pk=product_id)
-            user = request.user
-            student = Student.objects.get(user=user)
-            if product.seller != student:
-                return Response({'error': 'You can only view your own products.'}, status=status.HTTP_403_FORBIDDEN)
-            serializer = ProductSerializer(product)
-            return Response(serializer.data)
-        except Product.DoesNotExist:
-            return Response({'error': 'Product not found.'}, status=status.HTTP_404_NOT_FOUND)
 
     def delete(self, request, product_id):
         try:
@@ -176,7 +164,7 @@ class StudentProductDetailAPIView(APIView):
             if product.seller != student:
                 return Response({'error': 'You can only delete your own products.'}, status=status.HTTP_403_FORBIDDEN)
             product.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response({'success': 'Product successfully deleted.'}, status=status.HTTP_204_NO_CONTENT)
         except Product.DoesNotExist:
             return Response({'error': 'Product not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -198,18 +186,11 @@ class SearchProductAPIView(APIView):
 class ProductDetailPurchaseAPIView(APIView):
     permission_classes = [IsAuthenticated]  # Only allow authenticated users
 
-    def get(self, request, product_id):
-        try:
-            product = Product.objects.get(pk=product_id)
-            serializer = ProductSerializer(product)
-            return Response(serializer.data)
-        except Product.DoesNotExist:
-            return Response({'error': 'Product not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-    def post(self, request, product_id):
+    def post(self, request):
         user = request.user
         student = Student.objects.get(user=user)
         try:
+            product_id = request.data.get('product_id')
             product = Product.objects.get(pk=product_id)
             if product.seller == student:
                 return Response({'error': 'You cannot purchase your own product.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -270,35 +251,13 @@ class WithdrawFundsAPIView(APIView):
             return Response({'error': 'Invalid withdrawal amount or insufficient funds.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ChangePasswordAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        user = request.user
-        old_password = request.data.get('old_password')
-        new_password1 = request.data.get('new_password1')
-        new_password2 = request.data.get('new_password2')
-
-        if not old_password or not new_password1 or not new_password2:
-            return Response({'error': 'All password fields are required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if not user.check_password(old_password):
-            return Response({'error': 'Incorrect old password.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if new_password1 != new_password2:
-            return Response({'error': 'New passwords do not match.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        user.set_password(new_password1)
-        user.save()
-        return Response({'message': 'Password changed successfully.'}, status=status.HTTP_200_OK)
-
 class EmailSupportAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         user = request.user
         subject = request.data.get('subject')
-        message = request.data.get('message')
+        message = request.data.get('content')
 
         if not subject or not message:
             return Response({'error': 'Subject and message are required.'}, status=status.HTTP_400_BAD_REQUEST)

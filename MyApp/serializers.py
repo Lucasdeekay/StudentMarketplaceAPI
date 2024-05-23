@@ -13,13 +13,6 @@ class StudentSerializer(serializers.ModelSerializer):
         fields = ('user_username', 'first_name', 'last_name', 'email', 'matric_number', 'phone_number', 'bio')
 
 
-# Serializer for the Category model
-class CategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Category
-        fields = ('id', 'name')  # Include only ID and name for categories
-
-
 # Serializer for the Product model, including nested category serializer
 class ProductSerializer(serializers.ModelSerializer):
     seller_username = serializers.CharField(source='seller.user.username', read_only=True)  # Use seller username
