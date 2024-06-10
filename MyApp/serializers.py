@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Student, Category, Product, Transaction, Wallet
+from .models import Student, Product, Transaction, Wallet
 
 
 # Serializer for the Student model
@@ -16,7 +16,6 @@ class StudentSerializer(serializers.ModelSerializer):
 # Serializer for the Product model, including nested category serializer
 class ProductSerializer(serializers.ModelSerializer):
     seller_username = serializers.CharField(source='seller.user.username', read_only=True)  # Use seller username
-    category = CategorySerializer(read_only=True)  # Nested serializer for category
 
     class Meta:
         model = Product

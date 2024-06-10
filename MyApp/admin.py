@@ -1,10 +1,10 @@
 from django.contrib import admin
-from .models import Student, Category, Product, Transaction, Wallet
+from .models import Student, Product, Transaction, Wallet
 
 # Register the Student model in the admin panel
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ['user','first_name', 'last_name', 'email', 'matric_number', 'phone_number', 'bio']  # Display these fields in the student list
+    list_display = ['user','first_name', 'last_name', 'email', 'matric_no', 'phone_number', 'bio']  # Display these fields in the student list
 
 
 # Register the Product model in the admin panel
