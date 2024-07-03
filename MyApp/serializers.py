@@ -10,7 +10,7 @@ class StudentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Student
-        fields = ('user_username', 'first_name', 'last_name', 'email', 'matric_number', 'phone_number', 'bio')
+        fields = '__all__'
 
 
 # Serializer for the Product model, including nested category serializer
@@ -19,7 +19,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ('id', 'seller_username', 'title', 'description', 'price', 'category', 'image')
+        fields = '__all__'
 
 
 # Serializer for the Transaction model
@@ -30,11 +30,11 @@ class TransactionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transaction
-        fields = ('id', 'buyer_username', 'seller_username', 'product_title', 'quantity', 'total_amount', 'created_at')
+        fields = '__all__'
 
 
 # Serializer for the Wallet model
 class WalletSerializer(serializers.ModelSerializer):
     class Meta:
         model = Wallet
-        fields = ('student', 'balance')  # Include student (linked user) and balance
+        fields = '__all__'

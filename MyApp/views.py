@@ -15,7 +15,10 @@ from rest_framework.views import APIView
 from MyApp.models import Student, Wallet, Product, Transaction
 from MyApp.serializers import StudentSerializer, WalletSerializer, ProductSerializer
 
+from django.views.decorators.csrf import csrf_exempt
 
+
+@csrf_exempt
 def login_user(request):
     if request.method == 'POST':
         try:
@@ -28,7 +31,9 @@ def login_user(request):
                 user = authenticate(username=username, password=password)
                 if user is not None:
                     login(request, user)
-                    return JsonResponse({'success': 'Login successful', 'username': user.username}, status=200)
+                    student = Student.objects.get(user=user)
+                    student_serializer = StudentSerializer(student)
+                    return JsonResponse({'success': 'Login successful', 'student': student_serializer.data}, status=200)
                 else:
                     return JsonResponse({'error': 'Invalid credentials'}, status=401)
             else:
@@ -39,12 +44,11 @@ def login_user(request):
     else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-
+@csrf_exempt
 def register_user(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body.decode('utf-8'))
-            username = data.get('username').strip()
             first_name = data.get('first_name').strip()
             last_name = data.get('last_name').strip()
             email = data.get('email').strip()
@@ -52,11 +56,12 @@ def register_user(request):
             phone_number = data.get('phone_number').strip()
             bio = data.get('bio').strip()
             password = data.get('password').strip()
-            if User.objects.filter(**{"username": username, "email": email}).exists():
+            if User.objects.filter(**{"username": matric_number, "email": email}).exists():
                 return JsonResponse({'error': "User already exists"}, status=400)
             else:
-                user = User.objects.create_user(username=username, password=password, email=email)
-                Student.object.create(user=user, first_name=first_name, last_name=last_name, email=email, matric_number=matric_number, phone_number=phone_number, bio=bio)
+                user = User.objects.create_user(username=matric_number, password=password, email=email)
+                student = Student.objects.create(user=user, first_name=first_name, last_name=last_name, email=email, matric_no=matric_number, phone_number=phone_number, bio=bio)
+                Wallet.objects.create(student=student)
                 return JsonResponse({'success': "Registration successful"}, status=200)
         except Exception as e:
             return JsonResponse({'error': f'Internal server error: {str(e)}'}, status=500)
@@ -64,7 +69,7 @@ def register_user(request):
     else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-
+@csrf_exempt
 def forgot_password(request):
     if request.method == 'POST':
         try:
@@ -90,7 +95,7 @@ def forgot_password(request):
     else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-
+@csrf_exempt
 def retrieve_password(request):
     if request.method == 'POST':
         try:
@@ -120,57 +125,64 @@ def logout_user(request):
 
 
 class CurrentUserView(APIView):
-    permission_classes = [IsAuthenticated]  # Only allow authenticated users
-
-    def get(self, request):
-        user = request.user  # Access the authenticated user from the request
+    def get(self, request, *args, **kwargs):
+        user_id = request.query_params.get('user_id')
+        user = User.objects.get(id=int(user_id))
         student = Student.objects.get(user=user)  # Get the student profile linked to the user
         wallet = Wallet.objects.get(student=student)  # Get the wallet associated with the student
         student_serializer = StudentSerializer(student)
         wallet_serializer = WalletSerializer(wallet)
-        return Response({'user': student_serializer.data, 'wallet': wallet_serializer.data})
+        return JsonResponse({'student': student_serializer.data, 'wallet': wallet_serializer.data}, status=status.HTTP_200_OK)
 
 
 class StudentProductListAPIView(APIView):
-    permission_classes = [IsAuthenticated]  # Only allow authenticated users
-
-    def get(self, request):
-        user = request.user
+    def get(self, request, *args, **kwargs):
+        user_id = request.query_params.get('user_id')
+        user = User.objects.get(id=int(user_id))
         student = Student.objects.get(user=user)
-        products = Product.objects.filter(seller=student)
-        serializer = ProductSerializer(products, many=True)
-        return Response(serializer.data)
+        if Product.objects.filter(seller=student).exists():
+            products = Product.objects.filter(seller=student)
+            serializer = ProductSerializer(products, many=True)
+            return Response(serializer.data)
+
 
 class StudentProductCreateAPIView(APIView):
-    permission_classes = [IsAuthenticated]  # Only allow authenticated users
+    def post(self, request, *args, **kwargs):
+        data = json.loads(request.body.decode('utf-8'))
+        user_id = data.get('user_id').strip()
+        title = data.get('title').strip()
+        description = data.get('description').strip()
+        price = data.get('price').strip()
+        available_quantity = data.get('available_quantity').strip()
+        image = data.get('image').strip()
 
-    def post(self, request):
-        user = request.user
+        user = User.objects.get(id=int(user_id))
         student = Student.objects.get(user=user)
-        serializer = ProductSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(seller=student)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        if available_quantity == '0':
+            available_quantity = '1000000000'
+
+        if not Product.objects.filter(**{"title": title, "seller": student}).exists():
+            Product.objects.create(seller=student, title=title, description=description, price=price, available_quantity=available_quantity, image=image)
+            return Response(status=status.HTTP_201_CREATED)
+        return Response({'error': 'Product already created by user'}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class StudentProductDeleteAPIView(APIView):
-    permission_classes = [IsAuthenticated]  # Only allow authenticated users
-
     def delete(self, request, product_id):
         try:
             product = Product.objects.get(pk=product_id)
-            user = request.user
-            student = Student.objects.get(user=user)
-            if product.seller != student:
-                return Response({'error': 'You can only delete your own products.'}, status=status.HTTP_403_FORBIDDEN)
+            student = product.seller
             product.delete()
-            return Response({'success': 'Product successfully deleted.'}, status=status.HTTP_204_NO_CONTENT)
+
+            student_serializer = StudentSerializer(student)
+            
+            return Response({'success': 'Product successfully deleted.', 'student': student_serializer.data}, status=status.HTTP_200_OK)
         except Product.DoesNotExist:
             return Response({'error': 'Product not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 
 class SearchProductAPIView(APIView):
-    permission_classes = [IsAuthenticated]  # Optional, consider permission approach
     filter_backends = [SearchFilter]  # Enable search filter
     search_fields = ['title', 'description']  # Search by title and description
 
@@ -184,10 +196,9 @@ class SearchProductAPIView(APIView):
 
 
 class ProductDetailPurchaseAPIView(APIView):
-    permission_classes = [IsAuthenticated]  # Only allow authenticated users
-
-    def post(self, request):
-        user = request.user
+    def post(self, request, *args, **kwargs):
+        user_id = request.query_params.get('user_id')
+        user = User.objects.get(id=int(user_id))
         student = Student.objects.get(user=user)
         try:
             product_id = request.data.get('product_id')
@@ -221,10 +232,9 @@ class ProductDetailPurchaseAPIView(APIView):
 
 
 class DepositFundsAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        user = request.user
+    def post(self, request, *args, **kwargs):
+        user_id = request.query_params.get('user_id')
+        user = User.objects.get(id=int(user_id))
         student = Student.objects.get(user=user)
         try:
             amount = float(request.data.get('amount'))
@@ -235,11 +245,11 @@ class DepositFundsAPIView(APIView):
         except ValueError:
             return Response({'error': 'Invalid deposit amount.'}, status=status.HTTP_400_BAD_REQUEST)
 
-class WithdrawFundsAPIView(APIView):
-    permission_classes = [IsAuthenticated]
 
-    def post(self, request):
-        user = request.user
+class WithdrawFundsAPIView(APIView):
+    def post(self, request, *args, **kwargs):
+        user_id = request.query_params.get('user_id')
+        user = User.objects.get(id=int(user_id))
         student = Student.objects.get(user=user)
         try:
             amount = float(request.data.get('amount'))
@@ -252,18 +262,18 @@ class WithdrawFundsAPIView(APIView):
 
 
 class EmailSupportAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        user = request.user
+    def post(self, request, *args, **kwargs):
+        user_id = request.query_params.get('user_id')
+        user = User.objects.get(id=int(user_id))
+        student = Student.objects.get(user=user)
         subject = request.data.get('subject')
         message = request.data.get('content')
 
         if not subject or not message:
             return Response({'error': 'Subject and message are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        email_from = user.email
-        recipient_list = ['support@yourapp.com']  # Replace with your support email
+        email_from = 'lucasdeekay98@gmail.com'
+        recipient_list = ['lucasdeekay98@gmail.com']
         send_mail(subject, message, email_from, recipient_list, fail_silently=False)
 
         return Response({'message': 'Email sent successfully.'}, status=status.HTTP_200_OK)

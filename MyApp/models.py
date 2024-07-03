@@ -21,9 +21,9 @@ class Product(models.Model):
     seller = models.ForeignKey(Student, on_delete=models.CASCADE)  # Seller linked to Student model
     title = models.CharField(max_length=255)
     description = models.TextField()
-    price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0.01)])  # Enforce minimum price of $0.01
+    price = models.FloatField()
     available_quantity = models.IntegerField()
-    image = models.ImageField(upload_to='product_images/', blank=True)  # Consider security measures (e.g., file size validation)
+    image = models.CharField(max_length=1000, blank=True)
 
     def __str__(self):
         return self.title
@@ -34,7 +34,7 @@ class Transaction(models.Model):
     seller = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='seller_transactions')  # Seller linked to Student model
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    total_amount = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -43,7 +43,7 @@ class Transaction(models.Model):
 # This model represents a student's wallet for managing their funds within the marketplace
 class Wallet(models.Model):
     student = models.OneToOneField(Student, on_delete=models.CASCADE, primary_key=True)  # OneToOne relation with Student model
-    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    balance = models.FloatField(default=0)
 
     def __str__(self):
         return f"Wallet for {self.student.user.username} (Balance: ${self.balance})"
